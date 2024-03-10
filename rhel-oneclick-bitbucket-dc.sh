@@ -11,7 +11,7 @@ echo -e "${GREEN}Welcome to Bitbucket DC Setup Wizard!${NC}"
 echo ""
 
 # Description in cyan
-echo -e "${CYAN}Description: Streamline the setup process for Bitbucket Data Center with ease. Just run this script, follow the prompts, and watch your Confluence instance come to life.${NC}"
+echo -e "${CYAN}Description: Streamline the setup process for Bitbucket Data Center with ease. Just run this script, follow the prompts, and watch your Bitbucket instance come to life.${NC}"
 echo ""
 
 # Get started message in yellow
@@ -72,17 +72,18 @@ install_java() {
 # Install Java if not already installed
 check_java
 
-# Confluence Installation Directory 
+# Bitbucket Installation Directory 
 
 cd /mnt
 
-# Take the latest insataller version of Confluence 
+# Take the latest insataller version of Bitbucket 
 
-# wget https://www.atlassian.com/software/confluence/downloads/binary/atlassian-confluence-8.5.7-x64.bin
+wget https://www.atlassian.com/software/stash/downloads/binary/atlassian-bitbucket-8.9.11-x64.bin
 
-# sudo chmod +x atlassian-confluence-8.5.7-x64.bin
+sudo chmod +x atlassian-bitbucket-8.9.11-x64.bin
 
-# sh -x atlassian-confluence-8.5.7-x64.bin << EOF
+
+# sh -x atlassian-Bitbucket-8.5.7-x64.bin << EOF
 # o
 # 1
 # i
