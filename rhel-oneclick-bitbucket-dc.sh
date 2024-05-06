@@ -1,54 +1,13 @@
-!/bin/bash
-
-# Define color escape codes
-GREEN='\033[0;32m'
-CYAN='\033[0;36m'
-YELLOW='\033[1;33m'
-NC='\033[0m' # No Color
-
-# Welcome message in green
-echo -e "${GREEN}Welcome to Bitbucket DC Setup Wizard!${NC}"
-echo ""
-
-# Description in cyan
-echo -e "${CYAN}Description: Streamline the setup process for Bitbucket Data Center with ease. Just run this script, follow the prompts, and watch your Bitbucket instance come to life.${NC}"
-echo ""
-
-# Get started message in yellow
-echo -e "${YELLOW}Get started today and deploy your Bitbucket Data Center instance effortlessly!${NC}"
-echo ""
-
-# Additional notes
-echo "Please provide your Bitbucket Instance details."
-echo ""
-
-# End of script
-echo "End of script"
+#!/bin/bash
 
 # Install dependencies
 echo -e "${CYAN}Installing dependencies...${NC}"
 sudo yum update -y
+sudo yum install git -y
 sudo yum install -y wget vim 
+sudo yum install fontconfig -y
 
-# Function to check if Fontconfig is installed
-check_fontconfig() {
-    if rpm -q fontconfig &> /dev/null; then
-        echo -e "${CYAN}Fontconfig is already installed.${NC}"
-    else
-        echo -e "${YELLOW}Fontconfig is not installed. Installing Fontconfig...${NC}"
-        install_fontconfig
-    fi
-}
-
-# Function to install Fontconfig
-install_fontconfig() {
-    sudo yum install fontconfig -y
-}
-
-# Install Fontconfig if not already installed
-check_fontconfig
-
-
+systemctl stop firewalld.service
 
 # Function to check if Java is installed
 check_java() {
@@ -72,24 +31,56 @@ install_java() {
 # Install Java if not already installed
 check_java
 
+
+################ Only for azure to mount the existing disk for data #############################
+# Partition the disk with default input
+echo -e "n\n3\n\n\nw" | fdisk /dev/sda
+# Refresh partition table
+partprobe
+# Format partition as ext4
+mkfs.ext4 /dev/sda3 || { echo "Error: Formatting partition failed."; exit 1; }
+# Create a directory to mount the partition
+mkdir /data || { echo "Error: Creating directory failed."; exit 1; }
+# Mount the partition
+mount /dev/sda3 /data || { echo "Error: Mounting partition failed."; exit 1; }
+# Verify mount
+df -h /data &> /dev/null || { echo "Error: Mount point not found in df output."; exit 1; }
+echo "Partition mounted successfully."
+#################################################################################################
+
 # Bitbucket Installation Directory 
 
-cd /mnt
+cd /data
+mkdir bitbucket_mesh_home
+mkdir bitbucket_home
 
-# Take the latest insataller version of Bitbucket 
+#################### Downloading and install Bitbucket #############################
 
-wget https://www.atlassian.com/software/stash/downloads/binary/atlassian-bitbucket-8.9.11-x64.bin
+wget https://www.atlassian.com/software/stash/downloads/binary/atlassian-bitbucket-8.19.2.tar.gz
 
-sudo chmod +x atlassian-bitbucket-8.9.11-x64.bin
+tar -xvzf  atlassian-bitbucket-8.19.2.tar.gz
+
+# Get the mesh package
+wget https://www.atlassian.com/software/stash/downloads/binary/atlassian-bitbucket-mesh-2.5.2.tar.gz
+
+tar -xvzf  atlassian-bitbucket-mesh-2.5.2.tar.gz
+
+# Edit set-bitbucket-home.sh
+echo 'Editing set-bitbucket-home.sh...'
+sed -i '0,/BITBUCKET_HOME=/s|BITBUCKET_HOME=|BITBUCKET_HOME=/data/bitbucket_home|' atlassian-bitbucket-8.19.2/bin/set-bitbucket-home.sh
+
+# Edit set-bitbucket-mesh-home.sh
+echo 'Editing set-mesh-home.sh...'
+sed -i '0,/MESH_HOME=/s|MESH_HOME=|MESH_HOME=/data/bitbucket_mesh_home|' atlassian-bitbucket-mesh-2.5.2/bin/set-mesh-home.sh
+
+# Create a jira user with an empty full name
+adduser jira --comment "" || { echo "Error: User creation failed."; exit 1; }
+
+# Grant all permissions of the /data folder to the jira user
+chown -R jira:jira /data || { echo "Error: Granting permissions failed."; exit 1; }
 
 
-# sh -x atlassian-Bitbucket-8.5.7-x64.bin << EOF
-# o
-# 1
-# i
-# n
-# EOF
+# Now switch to jira user from root user and start the mesh and then Bitbucket server
+su -s /bin/bash jira -c 'sh -x /data/atlassian-bitbucket-mesh-2.5.2/bin/start-mesh.sh'
+su -s /bin/bash jira -c 'sh -x /data/atlassian-bitbucket-8.19.2/bin/start-bitbucket.sh'
 
-# stop the Firewalld Service 
-
-systemctl stop firewalld.service
